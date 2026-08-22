@@ -61,6 +61,19 @@ python -m unittest discover -s tests -t .
 
 ---
 
+## Documentation
+
+The build is documented phase by phase. Each doc explains what that phase
+delivers, the design decisions behind it, and how to verify it.
+
+- [Phase 1 — Foundation](docs/PHASE_1_FOUNDATION.md) — config, pricing table, project skeleton.
+- [Phase 2 — Core Layers](docs/PHASE_2_CORE_LAYERS.md) — cache, compressor, router, stats (each unit-tested in isolation).
+- [Phase 3 — Gateway & Dashboard](docs/PHASE_3_GATEWAY_DASHBOARD.md) — the `Gateway`, FastAPI shell, and live Chart.js dashboard.
+- [Phase 4 — Polish & Demo](docs/PHASE_4_POLISH_AND_DEMO.md) — threshold tuning, the pinned cost example, and the submission checklist.
+- [Demo Script](docs/DEMO_SCRIPT.md) — the 6-beat judge walkthrough.
+
+---
+
 ## A note on the git directory (`.gitdb`)
 
 This repository was initialised inside a sandbox that forbids creating a

@@ -28,3 +28,6 @@ tokentrim_stats.jsonl
 *.swp
 .idea/
 .vscode/
+
+# Agent/session tooling state
+.claude/
