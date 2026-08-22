@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets & local config
+.env
+
+# TokenTrim runtime artifacts
+tokentrim_stats.jsonl
+*.stats.jsonl
+
+# Git database. In this sandbox the git dir is `.gitdb` (a top-level `.git`
+# cannot be created here). Rename it to `.git` outside the sandbox to get a
+# standard repo. Either way, the git internals should never be tracked.
+.gitdb/
+
+# OS / editor cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/

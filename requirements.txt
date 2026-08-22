@@ -1,0 +1,17 @@
+# TokenTrim runtime dependencies.
+#
+# Install into a virtual environment:
+#     python -m venv .venv && source .venv/bin/activate
+#     pip install -r requirements.txt
+#
+# NOTE: the core logic (router, compressor, cache, stats, pipeline) is pure
+# Python and its unit tests run with the standard library alone — no installs
+# required. These packages are only needed to run the live gateway against
+# real Postgres + Model Studio.
+
+fastapi>=0.110         # gateway / HTTP API
+uvicorn[standard]>=0.29  # ASGI server for FastAPI
+pydantic>=2.6          # request/response models
+openai>=1.30           # OpenAI-compatible client, pointed at Model Studio
+psycopg2-binary>=2.9   # Postgres driver for the pgvector cache
+python-dotenv>=1.0     # load .env in local dev
