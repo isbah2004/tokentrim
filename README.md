@@ -39,6 +39,17 @@ token_optimizer/
 
 ---
 
+## Prerequisites
+
+- **Python 3.10+** with `pip` — the gateway and scripts.
+- **Docker** with **Compose v2** (the `docker compose` subcommand) — runs the
+  Postgres + pgvector database. Docker Desktop (macOS/Windows) or Docker Engine
+  with the Compose plugin (Linux).
+- *(Live mode only)* an **Alibaba Cloud Model Studio** API key in
+  `DASHSCOPE_API_KEY`. The offline demo needs neither a key nor Docker.
+
+---
+
 ## Quickstart
 
 ```bash
@@ -53,22 +64,47 @@ uvicorn app.main:app --reload # serve /chat, /stats, and the dashboard
 ## Database (Docker)
 
 The semantic cache is backed by Postgres + [pgvector](https://github.com/pgvector/pgvector).
-[`docker-compose.yml`](docker-compose.yml) runs it and applies
-[`db/schema.sql`](db/schema.sql) automatically on first boot — no manual `psql`
-step. `DATABASE_URL` in `.env` is already pointed at it.
+[`docker-compose.yml`](docker-compose.yml) runs the official `pgvector/pgvector:pg16`
+image, keeps data in a named volume, waits on a `pg_isready` healthcheck, and
+mounts [`db/schema.sql`](db/schema.sql) into the container's init directory so the
+schema (the `vector` extension, the `tokentrim_cache` table, and its IVFFlat
+index) is applied **automatically on first boot** — no manual `psql` step.
 
 ```bash
-./scripts/db_up.sh        # start + verify the extension and cache table exist
-# or just:
-docker compose up -d --wait
-docker compose down       # stop (keeps data)
-docker compose down -v    # stop and wipe data (schema re-applies on next up)
+./scripts/db_up.sh          # start + verify the vector extension and cache table
+# or manage it directly:
+docker compose up -d --wait # start (waits until healthy)
+docker compose ps           # status
+docker compose logs -f db   # follow logs
+docker compose down         # stop (keeps data)
+docker compose down -v      # stop and wipe data (schema re-applies on next up)
 ```
 
-The schema init script only runs while the data volume is empty; to reapply an
-edited `db/schema.sql`, `docker compose down -v` then `up` again. Without Docker,
-the offline demo (`TOKENTRIM_OFFLINE=1`) needs no database at all.
+The app reads the connection string from `DATABASE_URL` in `.env`, already set to
+match the compose service:
 
+| Host | Port | User | Password | Database |
+|------|------|------|----------|----------|
+| `localhost` | `5432` | `tokentrim` | `tokentrim` | `tokentrim` |
+
+```
+DATABASE_URL=postgresql://tokentrim:tokentrim@localhost:5432/tokentrim
+```
+
+Open a SQL shell to inspect what's cached:
+
+```bash
+docker compose exec db psql -U tokentrim -d tokentrim -c "SELECT count(*) FROM tokentrim_cache;"
+```
+
+**Notes**
+
+- The init script runs only while the data volume is empty; to reapply an edited
+  `db/schema.sql`, run `docker compose down -v` then `up` again.
+- If port `5432` is already in use, change the host side of the mapping in
+  `docker-compose.yml` (e.g. `"5433:5432"`) and update the port in `.env`.
+- No Docker? The offline demo (`TOKENTRIM_OFFLINE=1 uvicorn app.main:app`) uses an
+  in-memory store and needs no database at all.
 
 ## Running the tests
 
