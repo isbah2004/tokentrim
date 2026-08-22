@@ -1,0 +1,35 @@
+# pgvector-backed Postgres for TokenTrim's semantic cache.
+#
+#   docker compose up -d --wait     # start; schema auto-loads on first boot
+#   ./scripts/db_up.sh              # same, then verifies extension + table
+#   docker compose down            # stop (keeps data)
+#   docker compose down -v         # stop and wipe data (re-runs schema next up)
+#
+# DATABASE_URL for the app (already set in .env):
+#   postgresql://tokentrim:tokentrim@localhost:5432/tokentrim
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: tokentrim-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tokentrim
+      POSTGRES_PASSWORD: tokentrim
+      POSTGRES_DB: tokentrim
+    ports:
+      - "5432:5432"
+    volumes:
+      - tokentrim_pgdata:/var/lib/postgresql/data
+      # Auto-run on first init only (when the data volume is empty). The file
+      # is the single source of truth for the schema; edit db/schema.sql and
+      # `docker compose down -v && up` to reapply from scratch.
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tokentrim -d tokentrim"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  tokentrim_pgdata:

@@ -30,8 +30,9 @@ token_optimizer/
 │   ├── qwen_client.py   # chat client wrapper + offline fake      (Phase 3)
 │   └── main.py          # FastAPI /chat and /stats routes         (Phase 3)
 ├── static/dashboard.html      # Chart.js savings dashboard        (Phase 3)
-├── scripts/                   # hello_qwen, batch index, demo, tuning
+├── scripts/                   # hello_qwen, batch index, demo, tuning, db_up
 ├── db/schema.sql              # pgvector table
+├── docker-compose.yml         # pgvector Postgres (auto-loads schema)
 ├── tests/                     # unittest suite (stdlib only)
 └── docs/                      # per-phase build notes
 ```
@@ -43,11 +44,31 @@ token_optimizer/
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env          # then fill in DASHSCOPE_API_KEY + DATABASE_URL
-psql "$DATABASE_URL" -f db/schema.sql
+cp .env.example .env          # add DASHSCOPE_API_KEY (DATABASE_URL is preset for Docker)
+docker compose up -d --wait   # start pgvector Postgres; schema auto-loads on first boot
 python scripts/hello_qwen.py  # sanity-check Model Studio connectivity
 uvicorn app.main:app --reload # serve /chat, /stats, and the dashboard
 ```
+
+## Database (Docker)
+
+The semantic cache is backed by Postgres + [pgvector](https://github.com/pgvector/pgvector).
+[`docker-compose.yml`](docker-compose.yml) runs it and applies
+[`db/schema.sql`](db/schema.sql) automatically on first boot — no manual `psql`
+step. `DATABASE_URL` in `.env` is already pointed at it.
+
+```bash
+./scripts/db_up.sh        # start + verify the extension and cache table exist
+# or just:
+docker compose up -d --wait
+docker compose down       # stop (keeps data)
+docker compose down -v    # stop and wipe data (schema re-applies on next up)
+```
+
+The schema init script only runs while the data volume is empty; to reapply an
+edited `db/schema.sql`, `docker compose down -v` then `up` again. Without Docker,
+the offline demo (`TOKENTRIM_OFFLINE=1`) needs no database at all.
+
 
 ## Running the tests
 
