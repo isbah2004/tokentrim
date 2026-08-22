@@ -30,7 +30,7 @@ token_optimizer/
 │   ├── qwen_client.py   # chat client wrapper + offline fake      (Phase 3)
 │   └── main.py          # FastAPI /chat and /stats routes         (Phase 3)
 ├── static/dashboard.html      # Chart.js savings dashboard        (Phase 3)
-├── scripts/                   # hello_qwen, batch index, demo, tuning, db_up
+├── scripts/                   # hello_qwen, batch index, demo, tuning, db_up, publish
 ├── db/schema.sql              # pgvector table
 ├── docker-compose.yml         # pgvector Postgres (auto-loads schema)
 ├── tests/                     # unittest suite (stdlib only)
@@ -95,17 +95,25 @@ delivers, the design decisions behind it, and how to verify it.
 
 ---
 
-## A note on the git directory (`.gitdb`)
+## Publishing & the git directory (`.gitdb`)
 
 This repository was initialised inside a sandbox that forbids creating a
-top-level `.git/`. The git database therefore lives in **`.gitdb/`**. Every
-commit is a real, standard git commit — the directory just has a non-default
-name. To turn this into a completely normal repository, run **once** from your
-own terminal (outside the sandbox):
+top-level `.git/`, so the git database lives in **`.gitdb/`**. Every commit is a
+real, standard git commit — the directory just has a non-default name.
+
+**One command does everything** — normalize the git dir, bring up the database,
+and create + push the GitHub repo — run from your own terminal:
+
+```bash
+./scripts/publish.sh          # private repo "tokentrim"; use --public or --name to change
+```
+
+It is safe to re-run (each step skips if already done); see
+`./scripts/publish.sh --help`. To do just the git-directory step by hand:
 
 ```bash
 mv .gitdb .git
 ```
 
-After that, `git status`, `git log`, remotes, etc. all work exactly as usual.
-`.gitdb/` is listed in `.gitignore` so the git internals are never tracked.
+After that, `git status`, `git log`, remotes, etc. all work as usual. `.gitdb/`
+is listed in `.gitignore` so the git internals are never tracked.
