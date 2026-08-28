@@ -53,6 +53,8 @@ def get_summary(log_file: Optional[str] = None) -> Dict[str, Any]:
             "total_input_tokens": 0,
             "total_output_tokens": 0,
             "avg_input_tokens": 0.0,
+            "models_distribution": {},
+            "recent_requests": [],
         }
 
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -66,6 +68,15 @@ def get_summary(log_file: Optional[str] = None) -> Dict[str, Any]:
     generated = max(total - cache_hits, 0)  # requests that actually hit a model
     savings = naive_total - total_cost
 
+    models_distribution = {}
+    for r in rows:
+        model = r.get("model")
+        if model:
+            models_distribution[model] = models_distribution.get(model, 0) + 1
+            
+    recent_requests = rows[-10:]
+    recent_requests.reverse()
+
     return {
         "total_requests": total,
         "cache_hits": cache_hits,
@@ -77,4 +88,6 @@ def get_summary(log_file: Optional[str] = None) -> Dict[str, Any]:
         "total_input_tokens": total_input,
         "total_output_tokens": total_output,
         "avg_input_tokens": round(total_input / generated, 1) if generated else 0.0,
+        "models_distribution": models_distribution,
+        "recent_requests": recent_requests,
     }

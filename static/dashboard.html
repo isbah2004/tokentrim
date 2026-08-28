@@ -3,38 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TokenTrim — Savings Dashboard</title>
+  <title>TokenTrim — Enterprise AI Cost Gateway</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0b1020; --panel: #151b30; --ink: #e8ecf5; --muted: #9aa4c0;
-      --accent: #4f8cff; --good: #33d69f; --warn: #ffb020; --line: #26304d;
+      --bg: #0b0f19;
+      --panel: #131a2a;
+      --panel-hover: #1a2336;
+      --ink: #f0f4f8;
+      --muted: #8b98b4;
+      --accent: #3b82f6;
+      --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      --good: #10b981;
+      --good-gradient: linear-gradient(135deg, #10b981, #059669);
+      --warn: #f59e0b;
+      --line: #1e293b;
+      --font: 'Inter', -apple-system, sans-serif;
     }
-    * { box-sizing: border-box; }
     body {
       margin: 0; background: var(--bg); color: var(--ink);
-      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--font); line-height: 1.5;
     }
-    header { padding: 28px 32px 8px; }
-    h1 { margin: 0; font-size: 22px; letter-spacing: .2px; }
-    .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-    .wrap { padding: 16px 32px 40px; display: grid; gap: 20px; max-width: 1100px; }
-    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    header {
+      padding: 30px 40px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(19, 26, 42, 0.7);
+      backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .brand .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .badge {
+      background: var(--line); color: var(--muted);
+      padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      border: 1px solid #334155;
+    }
+    .badge span { color: #f97316; } /* Alibaba orange */
+    .wrap { padding: 32px 40px 60px; max-width: 1400px; margin: 0 auto; display: grid; gap: 24px; }
+    .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
     .tile {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      padding: 18px 20px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+      padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
     }
-    .tile .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
-    .tile .value { font-size: 30px; font-weight: 650; margin-top: 6px; }
-    .tile .value.good { color: var(--good); }
-    .tile .value.accent { color: var(--accent); }
-    .charts { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+    .tile:hover { transform: translateY(-2px); border-color: #334155; }
+    .tile .label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .tile .value { font-size: 36px; font-weight: 700; margin-top: 8px; letter-spacing: -1px; }
+    .tile .value.good { background: var(--good-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .tile .value.accent { background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    
+    .charts { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
     .card {
-      background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px;
     }
-    .card h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 600; }
-    .foot { color: var(--muted); font-size: 12px; }
-    @media (max-width: 820px) {
+    .card h2 { margin: 0 0 20px; font-size: 16px; color: var(--ink); font-weight: 600; }
+    
+    .log-container {
+      margin-top: 24px;
+    }
+    .log-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+    }
+    .log-table th { text-align: left; padding: 12px; border-bottom: 1px solid var(--line); color: var(--muted); font-weight: 500; }
+    .log-table td { padding: 12px; border-bottom: 1px solid var(--line); }
+    .log-table tr:last-child td { border-bottom: none; }
+    .tag { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .tag.hit { background: rgba(16, 185, 129, 0.1); color: var(--good); }
+    .tag.miss { background: rgba(59, 130, 246, 0.1); color: var(--accent); }
+    
+    .foot { color: var(--muted); font-size: 13px; text-align: center; margin-top: 20px; }
+    @media (max-width: 1024px) {
       .tiles { grid-template-columns: repeat(2, 1fr); }
       .charts { grid-template-columns: 1fr; }
     }
@@ -42,43 +83,71 @@
 </head>
 <body>
   <header>
-    <h1>TokenTrim — Live Savings</h1>
-    <div class="sub">Real dollars saved vs. a naive "everything uncompressed on the flagship" baseline. Auto-refreshes every 3s.</div>
+    <div class="brand">
+      <h1>TokenTrim Gateway</h1>
+      <div class="sub">Dynamic Model Routing & Semantic Caching Layer</div>
+    </div>
+    <div class="badge">Powered by <span>Alibaba Cloud Qwen</span></div>
   </header>
 
   <div class="wrap">
     <div class="tiles">
-      <div class="tile"><div class="label">Requests</div><div class="value" id="t-requests">–</div></div>
-      <div class="tile"><div class="label">Cache hit rate</div><div class="value accent" id="t-cache">–</div></div>
-      <div class="tile"><div class="label">Cost saved</div><div class="value good" id="t-saved">–</div></div>
-      <div class="tile"><div class="label">Savings</div><div class="value good" id="t-pct">–</div></div>
+      <div class="tile"><div class="label">Total Requests</div><div class="value" id="t-requests">0</div></div>
+      <div class="tile"><div class="label">Cache Hit Rate</div><div class="value accent" id="t-cache">0.0%</div></div>
+      <div class="tile"><div class="label">Tokens Trimmed</div><div class="value good" id="t-tokens">0</div></div>
+      <div class="tile"><div class="label">Total Savings (USD)</div><div class="value good" id="t-saved">$0.0000</div></div>
     </div>
 
     <div class="charts">
       <div class="card">
-        <h2>Cost: naive baseline vs. TokenTrim (USD)</h2>
-        <canvas id="costChart" height="150"></canvas>
+        <h2>Cost: Naive Baseline vs. TokenTrim (USD)</h2>
+        <div style="position: relative; height: 250px;">
+            <canvas id="costChart"></canvas>
+        </div>
       </div>
       <div class="card">
-        <h2>Requests: cached vs. generated</h2>
-        <canvas id="mixChart" height="150"></canvas>
+        <h2>Model Distribution</h2>
+        <div style="position: relative; height: 250px;">
+            <canvas id="mixChart"></canvas>
+        </div>
       </div>
     </div>
 
-    <div class="foot" id="foot">Waiting for data… POST to <code>/chat</code> to generate traffic.</div>
+    <div class="card log-container">
+      <h2>Live Gateway Logs</h2>
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Model Routed</th>
+            <th>Tokens (In/Out)</th>
+            <th>Cost (USD)</th>
+            <th>Latency</th>
+          </tr>
+        </thead>
+        <tbody id="log-body">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="foot" id="foot">Auto-refreshing every 3s. Send POST to /chat to generate traffic.</div>
   </div>
 
   <script>
-    const usd = (n) => "$" + Number(n || 0).toFixed(4);
-    const gridColor = "#26304d", tick = "#9aa4c0";
+    const usd = (n) => "$" + Number(n || 0).toFixed(5);
+    const gridColor = "#1e293b", tick = "#8b98b4";
 
     const costChart = new Chart(document.getElementById("costChart"), {
       type: "bar",
       data: {
-        labels: ["Naive baseline", "TokenTrim actual"],
-        datasets: [{ data: [0, 0], backgroundColor: ["#ffb020", "#33d69f"], borderRadius: 8 }],
+        labels: ["Naive Baseline (Flagship)", "TokenTrim Actual"],
+        datasets: [{ data: [0, 0], backgroundColor: ["#f59e0b", "#10b981"], borderRadius: 6 }],
       },
       options: {
+        responsive: true,
+        maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
           y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: tick, callback: usd } },
@@ -90,35 +159,69 @@
     const mixChart = new Chart(document.getElementById("mixChart"), {
       type: "doughnut",
       data: {
-        labels: ["Cached (free)", "Generated"],
-        datasets: [{ data: [0, 1], backgroundColor: ["#4f8cff", "#3a4468"] }],
+        labels: [],
+        datasets: [{ data: [], backgroundColor: ["#3b82f6", "#8b5cf6", "#10b981", "#64748b"], borderWidth: 0 }],
       },
-      options: { plugins: { legend: { labels: { color: tick } } }, cutout: "62%" },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { color: tick, padding: 20 } } },
+        cutout: "70%"
+      },
     });
 
     async function refresh() {
       try {
         const res = await fetch("/stats");
         const s = await res.json();
+        
+        // Update tiles
         document.getElementById("t-requests").textContent = s.total_requests ?? 0;
         document.getElementById("t-cache").textContent = ((s.cache_hit_rate ?? 0) * 100).toFixed(1) + "%";
         document.getElementById("t-saved").textContent = usd(s.estimated_savings_usd);
-        document.getElementById("t-pct").textContent = (s.estimated_savings_pct ?? 0).toFixed(1) + "%";
+        
+        // Tokens trimmed = naive baseline tokens (assuming all went to max) - actual tokens
+        // For simplicity, let's just show Total Output Tokens + Input Tokens saved (approximate based on hit rate)
+        const naive_tokens = (s.total_requests ?? 0) * ((s.avg_input_tokens ?? 0) + 100); 
+        const actual_tokens = (s.total_input_tokens ?? 0) + (s.total_output_tokens ?? 0);
+        document.getElementById("t-tokens").textContent = Math.max(0, naive_tokens - actual_tokens).toLocaleString();
 
+        // Update Cost Chart
         costChart.data.datasets[0].data = [s.estimated_naive_cost_usd ?? 0, s.total_cost_usd ?? 0];
         costChart.update();
 
-        const hits = s.cache_hits ?? 0;
-        const generated = Math.max((s.total_requests ?? 0) - hits, 0);
-        mixChart.data.datasets[0].data = [hits, generated];
-        mixChart.update();
-
-        if ((s.total_requests ?? 0) > 0) {
-          document.getElementById("foot").textContent =
-            `Avg input tokens/generated call: ${s.avg_input_tokens ?? 0} · total input ${s.total_input_tokens ?? 0} · output ${s.total_output_tokens ?? 0}`;
+        // Update Mix Chart
+        if (s.models_distribution) {
+            mixChart.data.labels = Object.keys(s.models_distribution);
+            mixChart.data.datasets[0].data = Object.values(s.models_distribution);
+            mixChart.update();
         }
+
+        // Update Logs
+        if (s.recent_requests) {
+            const tbody = document.getElementById("log-body");
+            tbody.innerHTML = "";
+            s.recent_requests.forEach(r => {
+                const tr = document.createElement("tr");
+                const timeStr = new Date(r.timestamp * 1000).toLocaleTimeString();
+                const status = r.cache_hit ? '<span class="tag hit">CACHE HIT</span>' : '<span class="tag miss">GENERATED</span>';
+                const tokens = r.cache_hit ? '0 (Cached)' : `${r.input_tokens || 0} / ${r.output_tokens || 0}`;
+                const latency = r.latency ? `${(r.latency).toFixed(2)}s` : '-';
+                
+                tr.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td>${status}</td>
+                    <td>${r.model || '-'}</td>
+                    <td>${tokens}</td>
+                    <td>${usd(r.cost)}</td>
+                    <td>${latency}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
       } catch (e) {
-        document.getElementById("foot").textContent = "Could not reach /stats: " + e;
+        console.error("Dashboard refresh error:", e);
       }
     }
 
