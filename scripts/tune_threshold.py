@@ -20,11 +20,23 @@ from app.vectormath import cosine_similarity
 
 # (question_a, question_b, should_hit)
 PAIRS = [
+    # Paraphrases (Should Hit = True)
     ("what are your opening hours", "when are you open", True),
     ("how do I reset my password", "I forgot my password, how do I change it", True),
     ("do you offer refunds", "what is your refund policy", True),
+    ("What services do you offer?", "What can you do for me?", True),
+    ("How much does it cost?", "What are your prices?", True),
+    ("Can I get a refund?", "What is your refund policy?", True),
+    ("where is your office located", "how do I find your building", True),
+    ("is there a free trial", "can I test it for free before buying", True),
+
+    # Distractors (Should Hit = False)
     ("what are your opening hours", "do you ship internationally", False),
     ("how do I reset my password", "what payment methods do you accept", False),
+    ("What are your hours?", "What color is your logo?", False),
+    ("How much does it cost?", "Where is your office located?", False),
+    ("is there a free trial", "how do I cancel my subscription", False),
+    ("where is your office located", "who is the CEO of the company", False),
 ]
 
 
