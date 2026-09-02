@@ -39,6 +39,14 @@ def score_difficulty(query: str, rag_chunk_count: int, history_len: int) -> floa
     score += min(rag_chunk_count / 5, 1.0) * 0.3   # more retrieved context skews harder
     score += min(history_len / 10, 1.0) * 0.1      # deep conversations skew harder
 
+    # Sentence count (multi-part questions are harder)
+    sentence_count = query.count('.') + query.count('?') + query.count('!')
+    score += min(sentence_count / 5, 1.0) * 0.15
+
+    # Code presence (code questions are harder)
+    if any(tok in query for tok in ['```', 'def ', 'class ', 'SELECT ', 'function']):
+        score += 0.15
+
     lowered = query.lower()
     if any(sig in lowered for sig in HARD_SIGNALS):
         score += 0.2

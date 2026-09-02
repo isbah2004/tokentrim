@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
@@ -75,11 +75,21 @@ class ChatRequest(BaseModel):
     query: str
     history: List[Dict[str, str]] = []
     rag_chunks: List[str] = []
+    skip_cache: bool = False
+    skip_compression: bool = False
+    forced_tier: Optional[str] = None
 
 
 @app.post("/chat")
 def chat(req: ChatRequest) -> Dict:
-    return gateway.chat(req.query, req.history, req.rag_chunks).as_dict()
+    return gateway.chat(
+        query=req.query,
+        history=req.history,
+        rag_chunks=req.rag_chunks,
+        skip_cache=req.skip_cache,
+        skip_compression=req.skip_compression,
+        forced_tier=req.forced_tier,
+    ).as_dict()
 
 
 @app.get("/stats")
@@ -92,4 +102,12 @@ def dashboard() -> str:
     index = STATIC_DIR / "dashboard.html"
     if not index.exists():
         return "<h1>TokenTrim</h1><p>dashboard.html not found.</p>"
+    return index.read_text(encoding="utf-8")
+
+
+@app.get("/test-chat", response_class=HTMLResponse)
+def test_chat() -> str:
+    index = STATIC_DIR / "chat.html"
+    if not index.exists():
+        return "<h1>TokenTrim</h1><p>chat.html not found.</p>"
     return index.read_text(encoding="utf-8")
