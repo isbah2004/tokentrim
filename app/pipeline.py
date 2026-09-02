@@ -121,20 +121,24 @@ class Gateway:
         ratio = uncompressed_est / max(compressed_est, 1)
 
         # Compute breakdown
-        # Build dummy lists of Message instead of dictionaries for estimate_message_tokens
-        system_msg = [Message(role="system", content=self.system_prompt)]
-        rag_msg = [Message(role="system", content="\n\n".join(rag_chunks))] if rag_chunks else []
-        query_msg = [Message(role="user", content=query)]
+        # Build dummy lists of dicts for estimate_message_tokens
+        system_msg = [{"role": "system", "content": self.system_prompt}]
+        rag_msg = [{"role": "system", "content": "\n\n".join(rag_chunks)}] if rag_chunks else []
+        query_msg = [{"role": "user", "content": query}]
+        
+        # We need msg_history as dicts as well for the token counter
+        history_dicts = [{"role": m.role, "content": m.content} for m in msg_history]
+        compressed_dicts = [{"role": m.role, "content": m.content} for m in compressed_history]
 
         uncompressed_breakdown = {
             "system": estimate_message_tokens(system_msg),
-            "history": estimate_message_tokens(msg_history),
+            "history": estimate_message_tokens(history_dicts),
             "rag": estimate_message_tokens(rag_msg),
             "query": estimate_message_tokens(query_msg)
         }
         compressed_breakdown = {
             "system": uncompressed_breakdown["system"],
-            "history": estimate_message_tokens(compressed_history),
+            "history": estimate_message_tokens(compressed_dicts),
             "rag": uncompressed_breakdown["rag"],
             "query": uncompressed_breakdown["query"]
         }
@@ -142,8 +146,8 @@ class Gateway:
         # --- Layer 3: model routing ------------------------------------
         if forced_tier:
             # Bypass router heuristics
-            from app.router import ModelDecision
-            decision = ModelDecision(model=forced_tier, reason="forced_by_user")
+            from app.router import RoutingDecision
+            decision = RoutingDecision(model=forced_tier, reason="forced_by_user", difficulty=1.0)
         else:
             decision = pick_model(query, len(rag_chunks), len(history))
             
