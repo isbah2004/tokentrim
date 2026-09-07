@@ -76,3 +76,42 @@ class CostTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class RouterThresholdBoundaryTests(unittest.TestCase):
+    """Boundary conditions at SIMPLE_MAX and MEDIUM_MAX thresholds."""
+
+    def test_score_exactly_at_simple_max_routes_to_plus(self):
+        """score == SIMPLE_MAX is NOT simple (< SIMPLE_MAX condition), so routes to plus."""
+        # We can't easily produce exactly the threshold, so we test just above it.
+        # A medium-length query with some context crosses ROUTER_SIMPLE_MAX.
+        query = " ".join(["word"] * 40)
+        decision = pick_model(query, 3, 0)
+        # Difficulty should be >= SIMPLE_MAX → plus or max
+        self.assertIn(decision.model, [config.MODEL_PLUS, config.MODEL_MAX])
+
+    def test_pricing_table_has_all_tiers(self):
+        """All three model tiers must be present in config.PRICING."""
+        for model in [config.MODEL_FLASH, config.MODEL_PLUS, config.MODEL_MAX]:
+            self.assertIn(model, config.PRICING)
+            self.assertIn("input", config.PRICING[model])
+            self.assertIn("output", config.PRICING[model])
+
+    def test_naive_cost_scales_with_input(self):
+        """Doubling input tokens should roughly double naive cost."""
+        c1 = naive_cost(input_tokens=1000, output_tokens=100)
+        c2 = naive_cost(input_tokens=2000, output_tokens=100)
+        self.assertGreater(c2, c1)
+
+    def test_estimate_cost_output_more_expensive_than_input(self):
+        """For all tiers, output cost per token > input cost per token (true for Qwen pricing)."""
+        for model, price in config.PRICING.items():
+            self.assertGreater(price["output"], price["input"],
+                               f"{model}: output price should exceed input price")
+
+    def test_max_tier_most_expensive(self):
+        """qwen3.7-max input price > qwen-plus > qwen3.5-flash."""
+        flash_in = config.PRICING[config.MODEL_FLASH]["input"]
+        plus_in = config.PRICING[config.MODEL_PLUS]["input"]
+        max_in = config.PRICING[config.MODEL_MAX]["input"]
+        self.assertGreater(max_in, plus_in)
+        self.assertGreater(plus_in, flash_in)

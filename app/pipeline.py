@@ -71,38 +71,38 @@ class Gateway:
             hit = self.cache.lookup(query)
             if hit is not None:
                 latency_ms = (time.perf_counter() - t0) * 1000
-            # A hit still "saves" whatever a full uncompressed flagship call
-            # would have cost; approximate that from the raw request so the
-            # dashboard credits the cache honestly.
-            baseline = self._baseline_for_cache_hit(query, history, rag_chunks)
-            log_request(
-                log_file=self.stats_log_file,
-                cache_hit=True,
-                model=None,
-                input_tokens=0,
-                output_tokens=0,
-                cached_tokens=0,
-                cost=0.0,
-                naive_cost=baseline,
-                latency_ms=latency_ms,
-                routing_reason="cache_hit",
-            )
-            return ChatResponse(
-                response=hit.response,
-                cached=True,
-                cost_usd=0.0,
-                tokens={
-                    "input": 0, 
-                    "output": 0,
-                    "breakdown": {
-                        "uncompressed": {"system": 0, "history": 0, "rag": 0, "query": 0},
-                        "compressed": {"system": 0, "history": 0, "rag": 0, "query": 0}
-                    }
-                },
-                latency_ms=latency_ms,
-                similarity=hit.similarity,
-                naive_cost_usd=baseline,
-            )
+                # A hit still "saves" whatever a full uncompressed flagship call
+                # would have cost; approximate that from the raw request so the
+                # dashboard credits the cache honestly.
+                baseline = self._baseline_for_cache_hit(query, history, rag_chunks)
+                log_request(
+                    log_file=self.stats_log_file,
+                    cache_hit=True,
+                    model=None,
+                    input_tokens=0,
+                    output_tokens=0,
+                    cached_tokens=0,
+                    cost=0.0,
+                    naive_cost=baseline,
+                    latency_ms=latency_ms,
+                    routing_reason="cache_hit",
+                )
+                return ChatResponse(
+                    response=hit.response,
+                    cached=True,
+                    cost_usd=0.0,
+                    tokens={
+                        "input": 0,
+                        "output": 0,
+                        "breakdown": {
+                            "uncompressed": {"system": 0, "history": 0, "rag": 0, "query": 0},
+                            "compressed": {"system": 0, "history": 0, "rag": 0, "query": 0}
+                        }
+                    },
+                    latency_ms=latency_ms,
+                    similarity=hit.similarity,
+                    naive_cost_usd=baseline,
+                )
 
         # --- Layer 2: context compression ------------------------------
         msg_history = [Message(role=m["role"], content=m["content"]) for m in history]

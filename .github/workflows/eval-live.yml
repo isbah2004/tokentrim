@@ -1,0 +1,45 @@
+name: TokenTrim Live Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      judge_model:
+        description: "Judge model override (default: qwen-plus)"
+        required: false
+        default: "qwen-plus"
+
+jobs:
+  eval-live:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install httpx
+
+    - name: Run live evaluation harness
+      env:
+        DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+        TOKENTRIM_JUDGE_LIVE: "1"
+        TOKENTRIM_JUDGE_MODEL: ${{ github.event.inputs.judge_model }}
+      run: |
+        python -m tests.eval.evaluate_pipeline \
+          --dataset tests/eval/datasets/golden_v1.jsonl \
+          --output eval-live-report.json \
+          --assert-thresholds
+
+    - name: Upload live eval report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: eval-live-report
+        path: eval-live-report.json

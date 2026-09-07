@@ -79,3 +79,52 @@ class SemanticCacheTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CacheStoreGrowthTests(unittest.TestCase):
+    """Extended tests: store growth, lookup returns original query, exact similarity=1."""
+
+    def test_store_grows_with_each_addition(self):
+        store = InMemoryVectorStore()
+        self.assertEqual(len(store), 0)
+        store.add("q1", "a1", [1.0, 0.0])
+        self.assertEqual(len(store), 1)
+        store.add("q2", "a2", [0.0, 1.0])
+        self.assertEqual(len(store), 2)
+
+    def test_lookup_returns_original_query(self):
+        cache = SemanticCache(
+            store=InMemoryVectorStore(),
+            embedder=FakeEmbedder(VECTORS),
+            similarity_threshold=0.90,
+        )
+        cache.store_answer("q", "the answer")
+        hit = cache.lookup("q_dup")
+        self.assertIsNotNone(hit)
+        self.assertEqual(hit.original_query, "q")
+
+    def test_exact_embed_similarity_is_one(self):
+        """Storing and looking up the identical embedding must yield similarity 1.0."""
+        cache = SemanticCache(
+            store=InMemoryVectorStore(),
+            embedder=FakeEmbedder(VECTORS),
+            similarity_threshold=0.90,
+        )
+        cache.store_answer("q", "exact answer")
+        hit = cache.lookup("q_dup")  # q_dup maps to same vector as q
+        self.assertIsNotNone(hit)
+        self.assertAlmostEqual(hit.similarity, 1.0, places=9)
+
+    def test_multiple_entries_nearest_returned(self):
+        """With multiple stored entries, the nearest one wins."""
+        cache = SemanticCache(
+            store=InMemoryVectorStore(),
+            embedder=FakeEmbedder(VECTORS),
+            similarity_threshold=0.90,
+        )
+        cache.store_answer("q_far", "far answer")
+        cache.store_answer("q", "close answer")
+        hit = cache.lookup("q_dup")  # should match "q", not "q_far"
+        self.assertIsNotNone(hit)
+        self.assertEqual(hit.original_query, "q")
+        self.assertEqual(hit.response, "close answer")

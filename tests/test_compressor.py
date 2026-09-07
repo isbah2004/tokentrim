@@ -78,3 +78,55 @@ class BuildPromptTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CompressionTokenReductionTests(unittest.TestCase):
+    """Compression must reduce history tokens; query is last message in build_prompt."""
+
+    def test_compression_reduces_history_tokens(self):
+        from app.tokens import estimate_message_tokens
+        history = [
+            Message("user", "word " * 100),
+            Message("assistant", "word " * 100),
+            Message("user", "word " * 100),
+            Message("assistant", "word " * 100),
+            Message("user", "word " * 100),
+            Message("assistant", "word " * 100),
+        ]
+        compressed = compress_history(history, keep_verbatim=2)
+        orig_tokens = estimate_message_tokens(
+            [{"role": m.role, "content": m.content} for m in history]
+        )
+        comp_tokens = estimate_message_tokens(
+            [{"role": m.role, "content": m.content} for m in compressed]
+        )
+        self.assertLess(comp_tokens, orig_tokens,
+                        "Compressed history should have fewer tokens than original")
+
+    def test_rerank_order_with_hashing_embedder(self):
+        """Reranking with HashingEmbeddingProvider should prefer text-similar chunks."""
+        from app.embeddings import HashingEmbeddingProvider
+        embedder = HashingEmbeddingProvider(dim=256)
+        query = "annual revenue report"
+        q_emb = embedder.embed(query)
+        chunks = [
+            ("unrelated weather forecast tomorrow", embedder.embed("unrelated weather forecast tomorrow")),
+            ("annual revenue report figures Q4", embedder.embed("annual revenue report figures Q4")),
+            ("completely different topic", embedder.embed("completely different topic")),
+        ]
+        result = rerank_chunks(q_emb, chunks, top_k=1)
+        self.assertEqual(result[0], "annual revenue report figures Q4")
+
+    def test_query_is_last_message_in_build_prompt(self):
+        msgs = build_prompt(
+            system_prompt="sys",
+            compressed_history=[Message("user", "earlier")],
+            rag_chunks=[],
+            query="the final user question",
+        )
+        self.assertEqual(msgs[-1]["role"], "user")
+        self.assertEqual(msgs[-1]["content"], "the final user question")
+
+    def test_negative_keep_verbatim_raises(self):
+        with self.assertRaises(ValueError):
+            compress_history([Message("user", "hi")], keep_verbatim=-1)
