@@ -48,3 +48,34 @@ class HashingEmbeddingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HashingEmbedderDeterminismTests(unittest.TestCase):
+    """Hashing embedder must be deterministic across different instances."""
+
+    def test_deterministic_across_instances(self):
+        """Two separately-constructed embedders must produce identical vectors."""
+        e1 = HashingEmbeddingProvider(dim=128)
+        e2 = HashingEmbeddingProvider(dim=128)
+        text = "process restarts cannot change the embedding"
+        self.assertEqual(e1.embed(text), e2.embed(text))
+
+    def test_different_dims_different_lengths(self):
+        e64 = HashingEmbeddingProvider(dim=64)
+        e512 = HashingEmbeddingProvider(dim=512)
+        self.assertEqual(len(e64.embed("hello")), 64)
+        self.assertEqual(len(e512.embed("hello")), 512)
+
+    def test_all_numeric_floats(self):
+        embedder = HashingEmbeddingProvider(dim=64)
+        vec = embedder.embed("test text here")
+        for v in vec:
+            self.assertIsInstance(v, float)
+
+    def test_batch_size_matches_input_count(self):
+        embedder = HashingEmbeddingProvider(dim=64)
+        texts = ["a", "bb", "ccc", "dddd"]
+        result = embedder.embed_batch(texts)
+        self.assertEqual(len(result), 4)
+        for v in result:
+            self.assertEqual(len(v), 64)

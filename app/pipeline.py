@@ -27,12 +27,14 @@ class ChatResponse:
     response: str
     cached: bool
     cost_usd: float
-    tokens: Dict[str, int]
+    tokens: Dict[str, Any]
     latency_ms: float
     model_used: Optional[str] = None
     routing_reason: Optional[str] = None
     similarity: Optional[float] = None
     naive_cost_usd: float = 0.0
+    naive_prompt: List[Dict[str, str]] = field(default_factory=list)
+    trimmed_prompt: List[Dict[str, str]] = field(default_factory=list)
 
     def as_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -56,44 +58,59 @@ class Gateway:
         query: str,
         history: Optional[List[Dict[str, str]]] = None,
         rag_chunks: Optional[List[str]] = None,
+        skip_cache: bool = False,
+        skip_compression: bool = False,
+        forced_tier: Optional[str] = None,
     ) -> ChatResponse:
         history = history or []
         rag_chunks = rag_chunks or []
         t0 = time.perf_counter()
 
         # --- Layer 1: semantic cache -----------------------------------
-        hit = self.cache.lookup(query)
-        if hit is not None:
-            latency_ms = (time.perf_counter() - t0) * 1000
-            # A hit still "saves" whatever a full uncompressed flagship call
-            # would have cost; approximate that from the raw request so the
-            # dashboard credits the cache honestly.
-            baseline = self._baseline_for_cache_hit(query, history, rag_chunks)
-            log_request(
-                log_file=self.stats_log_file,
-                cache_hit=True,
-                model=None,
-                input_tokens=0,
-                output_tokens=0,
-                cached_tokens=0,
-                cost=0.0,
-                naive_cost=baseline,
-                latency_ms=latency_ms,
-                routing_reason="cache_hit",
-            )
-            return ChatResponse(
-                response=hit.response,
-                cached=True,
-                cost_usd=0.0,
-                tokens={"input": 0, "output": 0},
-                latency_ms=latency_ms,
-                similarity=hit.similarity,
-                naive_cost_usd=baseline,
-            )
+        if not skip_cache:
+            hit = self.cache.lookup(query)
+            if hit is not None:
+                latency_ms = (time.perf_counter() - t0) * 1000
+                # A hit still "saves" whatever a full uncompressed flagship call
+                # would have cost; approximate that from the raw request so the
+                # dashboard credits the cache honestly.
+                baseline = self._baseline_for_cache_hit(query, history, rag_chunks)
+                log_request(
+                    log_file=self.stats_log_file,
+                    cache_hit=True,
+                    model=None,
+                    input_tokens=0,
+                    output_tokens=0,
+                    cached_tokens=0,
+                    cost=0.0,
+                    naive_cost=baseline,
+                    latency_ms=latency_ms,
+                    routing_reason="cache_hit",
+                )
+                return ChatResponse(
+                    response=hit.response,
+                    cached=True,
+                    cost_usd=0.0,
+                    tokens={
+                        "input": 0,
+                        "output": 0,
+                        "breakdown": {
+                            "uncompressed": {"system": 0, "history": 0, "rag": 0, "query": 0},
+                            "compressed": {"system": 0, "history": 0, "rag": 0, "query": 0}
+                        }
+                    },
+                    latency_ms=latency_ms,
+                    similarity=hit.similarity,
+                    naive_cost_usd=baseline,
+                )
 
         # --- Layer 2: context compression ------------------------------
         msg_history = [Message(role=m["role"], content=m["content"]) for m in history]
-        compressed_history = compress_history(msg_history)
+        if skip_compression:
+            compressed_history = list(msg_history)
+        else:
+            compressed_history = compress_history(msg_history)
+            
         messages = build_prompt(self.system_prompt, compressed_history, rag_chunks, query)
 
         # The uncompressed prompt (full history, untrimmed) is what a naive app
@@ -103,8 +120,37 @@ class Gateway:
         uncompressed_est = estimate_message_tokens(uncompressed_messages)
         ratio = uncompressed_est / max(compressed_est, 1)
 
+        # Compute breakdown
+        # Build dummy lists of dicts for estimate_message_tokens
+        system_msg = [{"role": "system", "content": self.system_prompt}]
+        rag_msg = [{"role": "system", "content": "\n\n".join(rag_chunks)}] if rag_chunks else []
+        query_msg = [{"role": "user", "content": query}]
+        
+        # We need msg_history as dicts as well for the token counter
+        history_dicts = [{"role": m.role, "content": m.content} for m in msg_history]
+        compressed_dicts = [{"role": m.role, "content": m.content} for m in compressed_history]
+
+        uncompressed_breakdown = {
+            "system": estimate_message_tokens(system_msg),
+            "history": estimate_message_tokens(history_dicts),
+            "rag": estimate_message_tokens(rag_msg),
+            "query": estimate_message_tokens(query_msg)
+        }
+        compressed_breakdown = {
+            "system": uncompressed_breakdown["system"],
+            "history": estimate_message_tokens(compressed_dicts),
+            "rag": uncompressed_breakdown["rag"],
+            "query": uncompressed_breakdown["query"]
+        }
+
         # --- Layer 3: model routing ------------------------------------
-        decision = pick_model(query, len(rag_chunks), len(history))
+        if forced_tier:
+            # Bypass router heuristics
+            from app.router import RoutingDecision
+            decision = RoutingDecision(model=forced_tier, reason="forced_by_user", difficulty=1.0)
+        else:
+            decision = pick_model(query, len(rag_chunks), len(history))
+            
         result = self.chat_model.generate(decision.model, messages)
 
         cost = estimate_cost(decision.model, result.prompt_tokens, result.completion_tokens)
@@ -117,7 +163,9 @@ class Gateway:
             model=config.MODEL_MAX,
         )
 
-        self.cache.store_answer(query, result.text)
+        if not skip_cache:
+            self.cache.store_answer(query, result.text)
+            
         latency_ms = (time.perf_counter() - t0) * 1000
 
         log_request(
@@ -137,11 +185,20 @@ class Gateway:
             response=result.text,
             cached=False,
             cost_usd=round(cost, 6),
-            tokens={"input": result.prompt_tokens, "output": result.completion_tokens},
+            tokens={
+                "input": result.prompt_tokens, 
+                "output": result.completion_tokens,
+                "breakdown": {
+                    "uncompressed": uncompressed_breakdown,
+                    "compressed": compressed_breakdown
+                }
+            },
             latency_ms=latency_ms,
             model_used=decision.model,
             routing_reason=decision.reason,
             naive_cost_usd=round(baseline, 6),
+            naive_prompt=uncompressed_messages,
+            trimmed_prompt=messages,
         )
 
     def _baseline_for_cache_hit(

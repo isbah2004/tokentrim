@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gateway Test Console</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --card-bg: rgba(20, 20, 20, 0.6);
+      --border: rgba(255, 255, 255, 0.1);
+      --text: #e0e0e0;
+      --muted: #a0a0a0;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      --success: #10b981;
+      --font: 'Outfit', -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 40%),
+                        radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.1), transparent 40%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    h1 {
+      margin: 0 0 1.5rem;
+      font-size: 1.5rem;
+      font-weight: 600;
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    h2 {
+      margin: 0 0 1.5rem;
+      font-size: 1.2rem;
+      color: var(--text);
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: var(--font);
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    button {
+      width: 100%;
+      background: var(--gradient);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 1rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    pre {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+      margin: 0;
+      height: 380px;
+      overflow-y: auto;
+    }
+
+    /* JSON Syntax Highlighting */
+    .string { color: #86efac; }
+    .number { color: #93c5fd; }
+    .boolean { color: #fca5a5; }
+    .null { color: #cbd5e1; }
+    .key { color: #c4b5fd; font-weight: 500; }
+
+    .loader {
+      display: none;
+      border: 3px solid rgba(255,255,255,0.1);
+      border-radius: 50%;
+      border-top: 3px solid var(--accent);
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .btn-text { display: block; }
+    button.loading .btn-text { display: none; }
+    button.loading .loader { display: block; }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Request Panel -->
+    <div class="panel">
+      <h1>Gateway Console</h1>
+      
+      <form id="chatForm">
+        <div class="form-group">
+          <label for="query">Prompt</label>
+          <textarea id="query" placeholder="Enter your prompt here..." required>Explain quantum computing in one sentence.</textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="complexity">Target Complexity (Optional Override)</label>
+          <select id="complexity">
+            <option value="auto">Auto (Router Decides)</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="tier_preference">Tier Preference</label>
+          <select id="tier_preference">
+            <option value="Auto">Auto</option>
+            <option value="Flash">Flash (Fast, Cheap)</option>
+            <option value="Plus">Plus (Balanced)</option>
+            <option value="Max">Max (Complex Reasoning)</option>
+          </select>
+        </div>
+
+        <button type="submit" id="submitBtn">
+          <span class="btn-text">Send Request</span>
+          <div class="loader"></div>
+        </button>
+      </form>
+    </div>
+
+    <!-- Response Panel -->
+    <div class="panel">
+      <h2>JSON Response</h2>
+      <pre id="responseBox">// Response will appear here...</pre>
+    </div>
+  </div>
+
+  <script>
+    function syntaxHighlight(json) {
+      if (typeof json != 'string') {
+        json = JSON.stringify(json, undefined, 2);
+      }
+      json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'number';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'key';
+          } else {
+            cls = 'string';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'boolean';
+        } else if (/null/.test(match)) {
+          cls = 'null';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+
+    document.getElementById('chatForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const btn = document.getElementById('submitBtn');
+      const responseBox = document.getElementById('responseBox');
+      
+      btn.classList.add('loading');
+      btn.disabled = true;
+      responseBox.innerHTML = '// Routing request...';
+
+      const query = document.getElementById('query').value;
+      const complexity = document.getElementById('complexity').value;
+      const tier_preference = document.getElementById('tier_preference').value;
+
+      const payload = {
+        query: query,
+        tier_preference: tier_preference !== 'Auto' ? tier_preference : undefined
+      };
+      
+      if (complexity !== 'auto') {
+        payload.complexity = complexity;
+      }
+
+      try {
+        const res = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        responseBox.innerHTML = syntaxHighlight(data);
+      } catch (err) {
+        responseBox.innerHTML = `<span style="color: #ef4444;">Error: ${err.message}</span>`;
+      } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

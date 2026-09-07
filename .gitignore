@@ -31,3 +31,5 @@ tokentrim_stats.jsonl
 
 # Agent/session tooling state
 .claude/
+docs/
+explanations/
