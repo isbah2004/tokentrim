@@ -1,0 +1,27 @@
+# Task List
+
+- [x] Phase 1 & 2: Core Components & Test Dependencies
+  - [x] test_router.py
+  - [x] test_compressor.py
+  - [x] test_cache.py
+  - [x] test_embeddings.py
+  - [x] test_tokens.py
+  - [x] test_vectormath.py
+  - [x] test_qwen_client.py
+- [x] Phase 3: Eval Harness
+  - [x] Setup fakes.py, dataset_loader.py, judge.py, metrics.py
+  - [x] Create datasets/golden_v1.jsonl
+  - [x] Create evaluate_pipeline.py
+  - [x] Create test_judge.py
+  - [x] Pass all thresholds (tier_accuracy >= 0.85, avg_compression_ratio >= 1.2, etc.)
+- [x] Phase 4: Integration Tests
+  - [x] Extend test_api.py
+  - [x] Create test_api_live.py
+- [x] Phase 5: Frontend Tests
+  - [x] Configure Vitest + React Testing Library
+  - [x] Create App.test.jsx
+- [x] Phase 6: CI/CD
+  - [x] Update .github/workflows/ci.yml
+  - [x] Create .github/workflows/eval-live.yml
+- [x] Phase 7: Dependencies
+  - [x] Add httpx to requirements.txt
